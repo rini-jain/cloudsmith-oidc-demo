@@ -33,7 +33,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Apply
+      - name: Terraform Applyy
         env:
           TF_VAR_org: rini-jain-rnye
           TF_VAR_repo:  terraform_priv
