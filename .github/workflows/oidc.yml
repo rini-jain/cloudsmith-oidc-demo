@@ -1,0 +1,44 @@
+name: Cloudsmith OIDC Terraform Apply
+on: [push]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get OIDC Token from GitHub and Exchange with Cloudsmith
+        id: auth
+        env:
+          ORG: rini-jain-rnye
+          SERVICE: test-T4Co	
+        run: |
+          ID_TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://cloudsmith" | jq -r '.value')
+
+          CS_TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"oidc_token\":\"$ID_TOKEN\",\"service_slug\":\"$SERVICE\"}" \
+            https://api.cloudsmith.io/openid/${ORG}/ | jq -r '.token')
+
+          echo "::add-mask::$CS_TOKEN"
+          echo "CLOUDSMITH_API_TOKEN=$CS_TOKEN" >> $GITHUB_ENV
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_org: rini-jain-rnye
+          TF_VAR_repo:  terraform_priv
+          TF_VAR_service_slug: terraformbot-keH1	
+          TF_VAR_api_key: ${{ env.CLOUDSMITH_API_TOKEN }}
+        run: |
+          terraform init
+          terraform apply -auto-approve
